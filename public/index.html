@@ -8,6 +8,19 @@
     <link href="https://unpkg.com/tailwindcss@^2.0/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
     <link rel="icon" href="https://admission.veritas.edu.ng/ui/dist/img/vuna.png">
+    <script>
+      // initialize API client
+      try {
+          const response = await fetch('https://maize-leaf-virus-detection-api.onrender.com/', {
+            method: 'GET'
+          });
+          const data = await response.json();
+          console.log(data.message);
+          
+        } catch (error) {
+          console.error("Error initializing API:", error);
+        }
+    </script>
 </head>
 <body class="bg-gray-900 text-white font-sans flex flex-col items-center justify-center min-h-screen px-2">
 
