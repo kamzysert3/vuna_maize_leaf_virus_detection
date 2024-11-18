@@ -7,6 +7,7 @@
     <!-- Tailwind CSS CDN -->
     <link href="https://unpkg.com/tailwindcss@^2.0/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <link rel="icon" href="https://admission.veritas.edu.ng/ui/dist/img/vuna.png">
 </head>
 <body class="bg-gray-900 text-white font-sans flex flex-col items-center justify-center min-h-screen px-2">
 
@@ -22,13 +23,13 @@
   <div class="flex flex-col items-center space-y-4">
 
     <!-- Blank Canvas -->
-    <div class="relative">
-      <video id="video"  width="500" height="375" class="absolute border-2 border-gray-500 rounded-lg shadow-lg bg-gray-800 opacity-0 z-2"></video>
-      <div id="camera-panel" class="absolute bottom-3 left-1/2 hidden" style="transform: translateX(-50%);">
-          <button id="cameraButton" class="items-center justify-center h-12 w-12 rounded-full bg-blue-600 hover:bg-blue-700 focus:outline-none transition-colors duration-300">
+    <div class="relative w-full max-w-md md:max-w-lg">
+      <video id="video" class="w-full h-full absolute border-2 border-gray-500 rounded-lg shadow-lg bg-gray-800 opacity-0 z-2"></video>
+      <div id="camera-panel" class="absolute bottom-1 left-1/2 hidden" style="transform: translateX(-50%);">
+          <button id="cameraButton" class="items-center justify-center h-8 w-8 text-xs rounded-full bg-blue-600 hover:bg-blue-700 focus:outline-none transition-colors duration-300">
             <i class="fas fa-camera"></i>
           </button>
-          <button id="cameraCancel" class="items-center justify-center h-12 w-12 rounded-full bg-red-600 hover:bg-red-700 focus:outline-none transition-colors duration-300">
+          <button id="cameraCancel" class="items-center justify-center h-8 w-8 text-xs rounded-full bg-red-600 hover:bg-red-700 focus:outline-none transition-colors duration-300">
             <i class="fas fa-times"></i>
           </button>
       </div>
@@ -36,7 +37,7 @@
         <div class="animate-spin rounded-full h-8 w-8 border-x-2 border-t-2 border-white"></div>
         <span>Analyzing...</span>
       </div>
-      <canvas id="canvas" width="500" height="375"  class="border-2 border-gray-500 rounded-lg shadow-lg bg-gray-800"></canvas>
+      <canvas id="canvas" class="w-full h-full border-2 border-gray-500 rounded-lg shadow-lg bg-gray-800"></canvas>
     </div>
 
     <!-- Control Panel -->
