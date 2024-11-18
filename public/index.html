@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YOLO Real-Time Detection</title>
+    <!-- Tailwind CSS CDN -->
+    <link href="https://unpkg.com/tailwindcss@^2.0/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-900 text-white font-sans flex flex-col items-center justify-center min-h-screen px-2">
+
+    <div class="w-full flex justify-center items-center mb-2">
+        <div class="bg-white rounded-lg p-2 flex gap-2 justify-center items-center">
+            <img src="https://admission.veritas.edu.ng/ui_admission/images/logo-desk.png" alt="veritas_logo" width="50" height="50">
+            <h1 class="text-3xl text-center font-bold" style="color: #1F2937;">Maize Leaf Virus Detection</h1>
+        </div>
+    </div>
+
+
+  <!-- Canvas and controls -->
+  <div class="flex flex-col items-center space-y-4">
+
+    <!-- Blank Canvas -->
+    <div class="relative">
+      <video id="video"  width="500" height="375" class="absolute border-2 border-gray-500 rounded-lg shadow-lg bg-gray-800 opacity-0 z-2"></video>
+      <div id="camera-panel" class="absolute bottom-3 left-1/2 hidden" style="transform: translateX(-50%);">
+          <button id="cameraButton" class="items-center justify-center h-12 w-12 rounded-full bg-blue-600 hover:bg-blue-700 focus:outline-none transition-colors duration-300">
+            <i class="fas fa-camera"></i>
+          </button>
+          <button id="cameraCancel" class="items-center justify-center h-12 w-12 rounded-full bg-red-600 hover:bg-red-700 focus:outline-none transition-colors duration-300">
+            <i class="fas fa-times"></i>
+          </button>
+      </div>
+      <div id="loading-indicator" class="absolute w-full h-full hidden flex items-center justify-center space-x-2 text-white text-lg font-bold border-2 border-gray-500 rounded-lg shadow-lg" style="background-color: #000000ad; backdrop-filter: blur(10px);">
+        <div class="animate-spin rounded-full h-8 w-8 border-x-2 border-t-2 border-white"></div>
+        <span>Analyzing...</span>
+      </div>
+      <canvas id="canvas" width="500" height="375"  class="border-2 border-gray-500 rounded-lg shadow-lg bg-gray-800"></canvas>
+    </div>
+
+    <!-- Control Panel -->
+    <div class="flex space-x-4">
+      <button id="takePictureButton" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md focus:outline-none  focus:ring-blue-300">
+        Take Picture
+      </button>
+      <button id="uploadPictureButton" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md focus:outline-none  focus:ring-green-300">
+        Upload Picture
+      </button>
+      <button id="analyzeButton" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md focus:outline-none  focus:ring-yellow-300">
+        Analyze
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const videoElement = document.getElementById('video');
+    const cameraPanel = document.getElementById('camera-panel');
+    const cameraButton = document.getElementById('cameraButton');
+    const cameraCancel = document.getElementById('cameraCancel');
+    const context = canvas.getContext('2d');
+    const takePictureButton = document.getElementById('takePictureButton');
+    const uploadPictureButton = document.getElementById('uploadPictureButton');
+    const analyzeButton = document.getElementById('analyzeButton');
+    let currentImage = null; // To hold the current image
+
+    cameraButton.addEventListener('click', async () => {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+        currentImage = canvas.toDataURL('image/jpeg');
+        // stop video and camera
+        const tracks = videoElement.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+        videoElement.srcObject = null;
+
+        videoElement.classList.toggle('opacity-0')
+        cameraPanel.classList.toggle('hidden')
+    })
+
+    cameraCancel.addEventListener('click', async () => {
+        // stop video and camera
+        const tracks = videoElement.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+        videoElement.srcObject = null;
+
+        videoElement.classList.toggle('opacity-0')
+        cameraPanel.classList.toggle('hidden')
+    })
+
+    // Take Picture (Capture from webcam)
+    takePictureButton.addEventListener('click', async () => {
+        await navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+            videoElement.srcObject = stream;
+            videoElement.play();
+        })
+        .catch(err => console.error("Error accessing camera: ", err));
+        videoElement.classList.toggle('opacity-0')
+        cameraPanel.classList.toggle('hidden')
+    });
+
+    // Upload Picture (From file input)
+    uploadPictureButton.addEventListener('click', () => {
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*';
+
+      fileInput.onchange = (event) => {
+        const file = event.target.files[0];
+        const reader = new FileReader();
+
+        reader.onload = () => {
+          const img = new Image();
+          img.src = reader.result;
+          img.onload = () => {
+            context.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas before drawing the new image
+            context.drawImage(img, 0, 0, canvas.width, canvas.height);
+            currentImage = reader.result; // Store the uploaded image as base64
+          };
+        };
+        
+        reader.readAsDataURL(file);
+      };
+
+      fileInput.click();
+    });
+
+    // Analyze (Send image for processing)
+    analyzeButton.addEventListener('click', async () => {
+      if (!currentImage) {
+        alert('Please take or upload a picture first!');
+        return;
+      }
+
+      document.getElementById('loading-indicator').classList.toggle('hidden');
+
+      // Send image to Python backend for inference
+      const formData = new FormData();
+      formData.append('file', dataURLtoBlob(currentImage), 'image.jpg');
+
+      try {
+        const response = await fetch('https://maize-leaf-virus-detection-api.onrender.com/predict/', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await response.json();
+
+        // Display the returned image with detections
+        const resultImage = new Image();
+        resultImage.src = 'data:image/jpeg;base64,' + data.image;
+        document.getElementById('loading-indicator').classList.toggle('hidden');
+        resultImage.onload = () => {
+          context.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas before drawing result
+          context.drawImage(resultImage, 0, 0, canvas.width, canvas.height);
+        };
+      } catch (error) {
+        console.error("Error fetching prediction:", error);
+      }
+    });
+
+    // Helper function to convert Data URL to Blob
+    function dataURLtoBlob(dataURL) {
+      const byteString = atob(dataURL.split(',')[1]);
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+
+      return new Blob([ab], { type: 'image/jpeg' });
+    }
+  </script>
+
+</body>
+</html>
+
