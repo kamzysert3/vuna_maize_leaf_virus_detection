@@ -91,12 +91,28 @@
 
     // Take Picture (Capture from webcam)
     takePictureButton.addEventListener('click', async () => {
-        await navigator.mediaDevices.getUserMedia({ video: true })
-        .then(stream => {
-            videoElement.srcObject = stream;
-            videoElement.play();
-        })
-        .catch(err => console.error("Error accessing camera: ", err));
+      await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: { exact: 'environment' } }
+      })
+      .then(stream => {
+          videoElement.srcObject = stream;
+          videoElement.play();
+      })
+      .catch(err => {
+          console.error("Error accessing environment camera, falling back to front camera: ", err);
+          // Fall back to front camera
+          navigator.mediaDevices.getUserMedia({ 
+              video: { facingMode: 'user' }
+          })
+          .then(stream => {
+              videoElement.srcObject = stream;
+              videoElement.play();
+          })
+          .catch(err => {
+              console.error("Error accessing front camera: ", err);
+          });
+      });
+
         videoElement.classList.toggle('opacity-0')
         cameraPanel.classList.toggle('hidden')
     });
@@ -125,6 +141,14 @@
       };
 
       fileInput.click();
+      if (videoElement.srcObject?.getTracks()) {
+        const tracks = videoElement.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+        videoElement.srcObject = null;
+  
+        videoElement.classList.toggle('opacity-0')
+        cameraPanel.classList.toggle('hidden')
+      }
     });
 
     // Analyze (Send image for processing)
