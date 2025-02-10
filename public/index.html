@@ -7,28 +7,95 @@
     <link href="https://unpkg.com/tailwindcss@^2.0/dist/tailwind.min.css" rel="stylesheet">
     <style>
         .hidden { display: none !important; }
+        .camera-container { position: relative; }
+        .camera-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
+            z-index: 10;
+        }
+        .round-button {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .round-button:hover {
+            transform: scale(1.1);
+        }
+        .capture-button {
+            background-color: rgb(239 68 68);
+        }
+        .cancel-button {
+            background-color: rgb(107 114 128);
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white p-4">
-    <div class="max-w-2xl mx-auto">
+    <div class="max-w-2xl mx-auto flex flex-col justify-center h-screen ">
         <h1 class="text-2xl font-bold text-center mb-6">Maize Leaf Virus Detection</h1>
         
         <!-- Main container -->
         <div class="space-y-4">
-            <!-- Preview -->
-            <div class="relative aspect-video bg-gray-800 rounded-lg overflow-hidden">
-                <video id="camera" class="w-full h-full object-cover hidden"></video>
+            <!-- Preview and Camera -->
+            <div class="relative aspect-video bg-gray-800 rounded-lg overflow-hidden camera-container">
+                <video id="camera" class="w-full h-full object-cover hidden" autoplay playsinline></video>
                 <canvas id="preview" class="w-full h-full"></canvas>
+                
+                <!-- Camera Controls -->
+                <div id="cameraControls" class="camera-controls hidden">
+                    <button id="captureBtn" class="round-button capture-button">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <circle cx="12" cy="12" r="6"></circle>
+                        </svg>
+                    </button>
+                    <button id="cancelCameraBtn" class="round-button cancel-button">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Loading Indicator -->
                 <div id="loader" class="hidden absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                    <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent"></div>
+                    <div class="animate-spin rounded-full h-12 w-12 border-4 border-white" style="border-top-color: #111827;"></div>
                 </div>
             </div>
 
-            <!-- Controls -->
-            <div class="flex gap-4 justify-center">
-                <button id="cameraBtn" class="px-4 py-2 bg-blue-500 rounded hover:bg-blue-600">Camera</button>
-                <button id="uploadBtn" class="px-4 py-2 bg-green-500 rounded hover:bg-green-600">Upload</button>
-                <button id="detectBtn" class="px-4 py-2 bg-yellow-500 rounded hover:bg-yellow-600 hidden">Detect</button>
+            <!-- Main Controls -->
+            <div id="mainControls" class="flex flex-wrap gap-4 justify-center">
+                <button id="cameraBtn" class="px-6 py-3 bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                        <circle cx="12" cy="13" r="4"></circle>
+                    </svg>
+                    Camera
+                </button>
+                <button id="uploadBtn" class="px-6 py-3 bg-green-500 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    Upload
+                </button>
+                <button id="detectBtn" class="px-6 py-3 bg-yellow-500 rounded-lg hover:bg-yellow-600 transition-colors hidden flex items-center gap-2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    Detect
+                </button>
             </div>
 
             <!-- Error display -->
@@ -45,7 +112,11 @@
             error: document.getElementById('error'),
             cameraBtn: document.getElementById('cameraBtn'),
             uploadBtn: document.getElementById('uploadBtn'),
-            detectBtn: document.getElementById('detectBtn')
+            detectBtn: document.getElementById('detectBtn'),
+            cameraControls: document.getElementById('cameraControls'),
+            captureBtn: document.getElementById('captureBtn'),
+            cancelCameraBtn: document.getElementById('cancelCameraBtn'),
+            mainControls: document.getElementById('mainControls')
         };
 
         let stream = null;
@@ -58,30 +129,90 @@
             setTimeout(() => elements.error.classList.add('hidden'), 5000);
         }
 
+        function setUIState(state) {
+            switch(state) {
+                case 'camera':
+                    elements.camera.classList.remove('hidden');
+                    elements.preview.classList.add('hidden');
+                    elements.cameraControls.classList.remove('hidden');
+                    elements.mainControls.classList.add('hidden');
+                    elements.detectBtn.classList.add('hidden');
+                    break;
+                case 'preview':
+                    elements.camera.classList.add('hidden');
+                    elements.preview.classList.remove('hidden');
+                    elements.cameraControls.classList.add('hidden');
+                    elements.mainControls.classList.remove('hidden');
+                    elements.detectBtn.classList.remove('hidden');
+                    break;
+                case 'initial':
+                    elements.camera.classList.add('hidden');
+                    elements.preview.classList.remove('hidden');
+                    elements.cameraControls.classList.add('hidden');
+                    elements.mainControls.classList.remove('hidden');
+                    elements.detectBtn.classList.add('hidden');
+                    break;
+            }
+        }
+
         // Camera handling
         async function startCamera() {
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment' }
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    } 
                 });
                 elements.camera.srcObject = stream;
-                elements.camera.classList.remove('hidden');
                 await elements.camera.play();
-                elements.detectBtn.classList.remove('hidden');
+                setUIState('camera');
             } catch (err) {
-                showError('Camera access failed: ' + err.message);
+                console.error(err);
+                showError('Camera access failed. Trying front camera...');
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { facingMode: 'user' } 
+                    });
+                    elements.camera.srcObject = stream;
+                    await elements.camera.play();
+                    setUIState('camera');
+                } catch (err2) {
+                    showError('Camera access failed completely: ' + err2.message);
+                }
             }
         }
 
         function stopCamera() {
             if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                elements.camera.classList.add('hidden');
-                elements.detectBtn.classList.add('hidden');
+              stream.getTracks().forEach(track => track.stop());
+              elements.camera.srcObject = null;
+              // Check if preview canvas has image data
+              const imageData = elements.preview.getContext('2d').getImageData(
+                  0, 0, elements.preview.width, elements.preview.height
+              );
+              const hasImage = imageData.data.some(pixel => pixel !== 0);
+              setUIState(hasImage ? 'preview' : 'initial');
             }
         }
 
         // Image capture and processing
+        function captureFromCamera() {
+            const canvas = document.createElement('canvas');
+            canvas.width = elements.camera.videoWidth;
+            canvas.height = elements.camera.videoHeight;
+            canvas.getContext('2d').drawImage(elements.camera, 0, 0);
+            
+            // Set preview dimensions and draw captured image
+            elements.preview.width = canvas.width;
+            elements.preview.height = canvas.height;
+            elements.preview.getContext('2d').drawImage(canvas, 0, 0);
+            
+            stopCamera();
+            setUIState('preview');
+        }
+
         function captureImage() {
             const canvas = document.createElement('canvas');
             const source = elements.camera.classList.contains('hidden') ? elements.preview : elements.camera;
@@ -134,34 +265,45 @@
         }
 
         // Event listeners
-        elements.cameraBtn.onclick = () => {
-            if (stream) {
-                stopCamera();
-            } else {
-                startCamera();
-            }
-        };
+        elements.cameraBtn.onclick = startCamera;
+        elements.captureBtn.onclick = captureFromCamera;
+        elements.cancelCameraBtn.onclick = stopCamera;
 
         elements.uploadBtn.onclick = () => {
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = 'image/*';
             input.onchange = async (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const img = new Image();
-                        img.onload = () => {
-                            elements.preview.width = img.width;
-                            elements.preview.height = img.height;
-                            ctx.drawImage(img, 0, 0);
-                            elements.detectBtn.classList.remove('hidden');
-                        };
-                        img.src = e.target.result;
-                    };
-                    reader.readAsDataURL(file);
+          const file = e.target.files[0];
+          if (file) {
+              const reader = new FileReader();
+              reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const aspectRatio = img.width / img.height;
+                const previewWidth = elements.preview.clientWidth;
+                const previewHeight = elements.preview.clientHeight;
+                elements.preview.width = previewWidth;
+                elements.preview.height = previewHeight;
+
+                let drawWidth = previewWidth;
+                let drawHeight = previewWidth / aspectRatio;
+                
+                if (drawHeight > previewHeight) {
+              drawHeight = previewHeight;
+              drawWidth = previewHeight * aspectRatio;
                 }
+
+                const x = (previewWidth - drawWidth) / 2;
+                const y = (previewHeight - drawHeight) / 2;
+
+                ctx.drawImage(img, x, y, drawWidth, drawHeight);
+                elements.detectBtn.classList.remove('hidden');
+            };
+            img.src = e.target.result;
+              };
+              reader.readAsDataURL(file);
+          }
             };
             input.click();
         };
