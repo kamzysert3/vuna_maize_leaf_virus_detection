@@ -18,6 +18,16 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 3000;
 
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+})
+
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'ok'
+    });
+})
+
 app.listen(PORT, err => {
     console.log(`listening on ${PORT}`);
 })
